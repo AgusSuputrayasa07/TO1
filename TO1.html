@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulator Ujian Interaktif - TKA Matematika</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb', // blue-600
+                        secondary: '#475569', // slate-600
+                        accent: '#f59e0b', // amber-500
+                        success: '#10b981', // emerald-500
+                        danger: '#ef4444', // red-500
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- MathJax for LaTeX rendering -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <!-- html2pdf for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        
+        /* Custom Checkbox/Radio Button Styles */
+        .option-label { cursor: pointer; transition: all 0.2s ease-in-out; }
+        .option-input:checked + .option-box {
+            background-color: #eff6ff; 
+            border-color: #3b82f6; 
+        }
+        .option-input:checked + .option-box .option-letter {
+            background-color: #3b82f6; color: white;
+        }
+
+        /* Number Grid Styles */
+        .grid-btn { transition: all 0.2s; }
+        .grid-btn.active { border: 2px solid #3b82f6; transform: scale(1.05); font-weight: bold; }
+        .grid-btn.answered { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+        .grid-btn.flagged { background-color: #f59e0b; color: white; border-color: #f59e0b; }
+        .grid-btn.answered.flagged { background: linear-gradient(135deg, #3b82f6 50%, #f59e0b 50%); color: white; border-color: transparent;}
+        
+        /* Progress Circle */
+        .progress-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .progress-circle::before {
+            content: "";
+            position: absolute;
+            inset: 12px;
+            background-color: white;
+            border-radius: 50%;
+        }
+        .progress-text { position: relative; z-index: 1; text-align: center; }
+
+        /* Print styles for PDF */
+        .pdf-page-break { page-break-after: always; }
+        
+        /* Hide scrollbar for clean UI */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- VIEW 1: PREPARATION SCREEN -->
+    <div id="view-prep" class="flex-grow flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-100 max-w-4xl w-full overflow-hidden flex flex-col md:flex-row">
+            
+            <div class="bg-blue-600 text-white p-8 md:w-5/12 flex flex-col justify-between">
+                <div>
+                    <span class="inline-block px-3 py-1 bg-blue-500 rounded-full text-xs font-semibold tracking-wider mb-4">
+                        • TRY OUT TKA MATEMATIKA
+                    </span>
+                    <h1 class="text-3xl font-bold mb-4 leading-tight">Simulator Ujian Interaktif<br>TKA Matematika</h1>
+                    <p class="text-blue-100 mb-8 text-sm">
+                        Mengujikan berbagai format soal (Pilihan Ganda, Benar/Salah, & Majemuk). Pastikan kerjakan dengan cermat.
+                    </p>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3 bg-blue-700/50 p-3 rounded-lg">
+                            <i class="fa-solid fa-list-ol text-xl w-6 text-center text-blue-200"></i>
+                            <div>
+                                <p class="text-xs text-blue-200">Jumlah Soal</p>
+                                <p class="font-semibold" id="prep-total-questions">- Soal</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 bg-blue-700/50 p-3 rounded-lg">
+                            <i class="fa-solid fa-clock text-xl w-6 text-center text-blue-200"></i>
+                            <div>
+                                <p class="text-xs text-blue-200">Durasi Default</p>
+                                <p class="font-semibold" id="prep-duration-display">40 Menit</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-8 md:w-7/12 bg-white">
+                <h2 class="text-2xl font-bold text-slate-800 mb-6">Identitas Peserta</h2>
+                
+                <div id="prep-error" class="hidden mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm flex items-start gap-2">
+                    <i class="fa-solid fa-circle-exclamation mt-1"></i>
+                    <span id="prep-error-msg">Mohon lengkapi semua data dengan benar.</span>
+                </div>
+
+                <form id="prep-form" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-600 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
+                        <input type="text" id="input-name" class="w-full border border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" required>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-1">Kelas <span class="text-red-500">*</span></label>
+                            <input type="text" id="input-class" class="w-full border border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-1">Asal Sekolah <span class="text-red-500">*</span></label>
+                            <input type="text" id="input-school" class="w-full border border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" required>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-2">
+                        <label class="block text-sm font-semibold text-slate-600 mb-2">Atur Durasi Ujian (Menit) <span class="text-red-500">*</span></label>
+                        <div class="flex items-center gap-4">
+                            <input type="range" id="input-duration" min="10" max="120" step="5" value="40" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                            <span id="duration-val" class="font-bold text-blue-600 w-12 text-right">40</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-6 border-t border-slate-100">
+                        <button type="button" onclick="startExam()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                            Mulai Ujian <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 2: EXAM SCREEN -->
+    <div id="view-exam" class="hidden flex-col h-screen bg-slate-50">
+        <header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-20 px-4 md:px-8 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-100 text-blue-600 p-2 rounded-lg hidden md:block">
+                    <i class="fa-solid fa-laptop-code"></i>
+                </div>
+                <div>
+                    <h2 class="font-bold text-slate-800 leading-tight">TKA Matematika SMA </h2>
+                    <div class="text-xs text-slate-500 font-medium mt-0.5">
+                        <span id="header-progress-text">Dijawab: 0/0</span> 
+                        <span class="mx-1">•</span> 
+                        <span id="header-student-name">Nama Peserta</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-full shadow-sm">
+                <i class="fa-regular fa-clock text-blue-300"></i>
+                <span id="timer-display" class="font-mono font-bold text-lg tracking-wider">00:00:00</span>
+            </div>
+        </header>
+
+        <main class="flex-grow flex flex-col md:flex-row overflow-hidden max-w-7xl mx-auto w-full">
+            <div class="flex-grow overflow-y-auto p-4 md:p-8 relative custom-scrollbar">
+                
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 max-w-4xl mx-auto">
+                    <div class="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="bg-blue-600 text-white px-3 py-1 rounded-lg font-bold text-lg" id="q-number">SOAL 1</span>
+                            <span class="bg-amber-100 text-amber-700 px-2 py-1 rounded-md text-xs font-semibold border border-amber-200" id="q-type-badge">PILIHAN GANDA</span>
+                        </div>
+                        
+                        <button onclick="toggleFlag()" id="btn-flag" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-semibold transition-colors hover:bg-slate-50 text-slate-600">
+                            <i class="fa-solid fa-flag"></i> <span class="hidden sm:inline">Tandai Ragu</span>
+                        </button>
+                    </div>
+
+                    <div id="q-text" class="text-lg text-slate-800 leading-relaxed mb-6">
+                        <!-- Question content -->
+                    </div>
+
+                    <div id="q-interaction-area" class="space-y-3">
+                        <!-- Options or Tables injected here -->
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-between items-center max-w-4xl mx-auto mb-20 md:mb-0">
+                    <button onclick="navQuestion('prev')" id="btn-prev" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 font-semibold hover:bg-slate-50 transition-colors disabled:opacity-50 flex items-center gap-2">
+                        <i class="fa-solid fa-arrow-left"></i> Sebelumnya
+                    </button>
+                    
+                    <button onclick="navQuestion('next')" id="btn-next" class="px-5 py-2.5 rounded-xl bg-blue-100 text-blue-700 font-bold hover:bg-blue-200 transition-colors flex items-center gap-2 hidden">
+                        Berikutnya <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                    
+                    <button onclick="showSubmitModal()" id="btn-submit-main" class="px-5 py-2.5 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 transition-colors flex items-center gap-2 hidden">
+                        <i class="fa-solid fa-check-double"></i> Selesaikan
+                    </button>
+                </div>
+            </div>
+
+            <aside class="w-full md:w-80 bg-white border-t md:border-t-0 md:border-l border-slate-200 flex flex-col shrink-0">
+                <div class="p-4 border-b border-slate-100">
+                    <h3 class="font-bold text-slate-800 mb-3">Navigasi Soal</h3>
+                    <div class="grid grid-cols-2 gap-2 text-xs font-medium text-slate-600">
+                        <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-sm bg-white border border-slate-300"></div> Belum</div>
+                        <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-sm bg-blue-500"></div> Terjawab</div>
+                        <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-sm bg-amber-500"></div> Ragu-ragu</div>
+                        <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-sm bg-white border-2 border-blue-500"></div> Aktif</div>
+                    </div>
+                </div>
+                
+                <div class="p-4 flex-grow overflow-y-auto">
+                    <div id="grid-container" class="grid grid-cols-5 md:grid-cols-5 gap-2">
+                        <!-- Grid buttons injected here -->
+                    </div>
+                </div>
+
+                <div class="p-4 border-t border-slate-100 bg-slate-50 md:hidden">
+                     <button onclick="showSubmitModal()" class="w-full py-2.5 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 transition-colors shadow-sm">
+                        Selesaikan Ujian
+                    </button>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <!-- VIEW 3: CONFIRMATION MODAL -->
+    <div id="modal-submit" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center">
+            <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                <i class="fa-solid fa-circle-question"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-800 mb-2">Selesaikan Ujian?</h3>
+            <p class="text-slate-600 mb-6" id="modal-warning-text">
+                Anda masih memiliki <strong class="text-amber-500">X soal</strong> yang belum dijawab.
+            </p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeSubmitModal()" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 font-semibold hover:bg-slate-50 transition-colors flex-1">
+                    Kembali
+                </button>
+                <button onclick="submitExam()" class="px-5 py-2.5 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 transition-colors flex-1 shadow-lg shadow-green-200">
+                    Ya, Selesaikan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 4: RESULT SCREEN -->
+    <div id="view-result" class="hidden min-h-screen bg-slate-100 p-4 py-8">
+        <div class="max-w-5xl mx-auto" id="report-container">
+            
+            <div class="bg-white rounded-t-2xl shadow-sm border border-slate-200 p-6 md:p-8 flex flex-col md:flex-row gap-8 items-center md:items-start justify-between border-b-4 border-b-blue-600">
+                <div class="flex-1 text-center md:text-left w-full">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <div>
+                            <h1 class="text-2xl font-bold text-slate-800 mb-1">Hasil Try Out TKA</h1>
+                            <p class="text-slate-500">Matematika SMA </p>
+                        </div>
+                        <div class="flex gap-2" id="result-actions">
+                            <button onclick="location.reload()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600 font-semibold hover:bg-slate-50 text-sm">
+                                <i class="fa-solid fa-rotate-right mr-1"></i> Ulangi
+                            </button>
+                            <button onclick="generatePDF()" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 text-sm shadow-md">
+                                <i class="fa-solid fa-download mr-1"></i> Unduh PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div>
+                            <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Nama</p>
+                            <p class="font-bold text-slate-800" id="res-name">-</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Kelas</p>
+                            <p class="font-bold text-slate-800" id="res-class">-</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Sekolah</p>
+                            <p class="font-bold text-slate-800" id="res-school">-</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Waktu Selesai</p>
+                            <p class="font-bold text-slate-800 text-sm" id="res-time">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-center justify-center shrink-0">
+                    <div id="score-circle" class="progress-circle bg-slate-200" style="background: conic-gradient(#10b981 0%, #e2e8f0 0);">
+                        <div class="progress-text">
+                            <span class="text-4xl font-extrabold text-slate-800 block leading-none" id="res-score-percent">0</span>
+                            <span class="text-sm font-semibold text-slate-500">SKOR</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex gap-4 text-sm font-semibold">
+                        <div class="text-green-600"><i class="fa-solid fa-check"></i> <span id="res-correct">0</span></div>
+                        <div class="text-red-500"><i class="fa-solid fa-xmark"></i> <span id="res-wrong">0</span></div>
+                        <div class="text-amber-500"><i class="fa-solid fa-minus"></i> <span id="res-empty">0</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-b-2xl shadow-sm border-x border-b border-slate-200 p-6 md:p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-slate-800">Pembahasan & Evaluasi Detail</h2>
+                    <button onclick="toggleAllExplanations()" id="btn-toggle-expl" class="text-blue-600 font-semibold text-sm hover:underline">
+                        Buka Semua Pembahasan
+                    </button>
+                </div>
+                <div id="evaluation-list" class="space-y-6"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * DATA SOAL TKA MATEMATIKA (10 Soal Beragam Format)
+         */
+        const examData = [
+            {
+                id: 1,
+                type: "PILIHAN GANDA",
+                question: "Diberikan tiga himpunan bilangan sebagai berikut:<br><br>\\(A = \\{x \\mid x < 6, x \\in \\text{Bilangan Asli}\\}\\)<br>\\(B = \\{x \\mid x \\text{ bilangan genap}, x \\in \\text{Bilangan Cacah}\\}\\)<br>\\(C = \\{x \\mid x \\le 10, x \\in \\text{Bilangan Prima}\\}\\)<br><br>Berdasarkan himpunan-himpunan tersebut, hasil dari \\((A \\cap B) \\cup C\\) adalah ....",
+                options: [
+                    { id: "A", text: "\\(\\{2, 3, 5, 7\\}\\)" },
+                    { id: "B", text: "\\(\\{0, 2, 3, 5, 7\\}\\)" },
+                    { id: "C", text: "\\(\\{2, 3, 4, 5, 7\\}\\)" },
+                    { id: "D", text: "\\(\\{0, 2, 3, 4, 5, 7\\}\\)" },
+                    { id: "E", text: "\\(\\{2, 3, 4, 5, 7, 10\\}\\)" }
+                ],
+                correctAnswer: "C",
+                explanation: "\\(A\\) (Asli < 6) = \\(\\{1, 2, 3, 4, 5\\}\\)<br>\\(B\\) (Cacah Genap) = \\(\\{0, 2, 4, 6, 8, 10, ...\\}\\)<br>\\(C\\) (Prima \\(\\le 10\\)) = \\(\\{2, 3, 5, 7\\}\\)<br><br>Irisan \\(A \\cap B = \\{2, 4\\}\\)<br>Gabungan \\((A \\cap B) \\cup C = \\{2, 4\\} \\cup \\{2, 3, 5, 7\\} = \\{2, 3, 4, 5, 7\\}\\)."
+            },
+            {
+                id: 2,
+                type: "PILIHAN GANDA",
+                question: "Bentuk sederhana dari $$ \\frac{3^{\\frac{2}{3}} \\times 8^{\\frac{3}{2}}}{2^{\\frac{5}{2}} \\times 9^{\\frac{5}{6}}} $$ adalah ....",
+                options: [
+                    { id: "A", text: "\\(\\frac{1}{42}\\)" },
+                    { id: "B", text: "\\(\\frac{2}{3}\\)" },
+                    { id: "C", text: "\\(\\frac{4}{3}\\)" },
+                    { id: "D", text: "6" },
+                    { id: "E", text: "12" }
+                ],
+                correctAnswer: "C",
+                explanation: "\\(8 = 2^3\\) sehingga \\(8^{\\frac{3}{2}} = (2^3)^{\\frac{3}{2}} = 2^{\\frac{9}{2}}\\)<br>\\(9 = 3^2\\) sehingga \\(9^{\\frac{5}{6}} = (3^2)^{\\frac{5}{6}} = 3^{\\frac{5}{3}}\\)<br><br>Bentuk persamaan menjadi:<br>$$ = 3^{\\frac{2}{3} - \\frac{5}{3}} \\times 2^{\\frac{9}{2} - \\frac{5}{2}} $$<br>$$ = 3^{-\\frac{3}{3}} \\times 2^{\\frac{4}{2}} = 3^{-1} \\times 2^2 = \\frac{1}{3} \\times 4 = \\frac{4}{3} $$"
+            },
+            {
+                id: 3,
+                type: "BENAR SALAH",
+                question: "Operasi biner \\(\\odot\\) didefinisikan sebagai $$a \\odot b = \\frac{(a-b)^2 + 2ab}{a+b}$$ untuk setiap bilangan real tidak negatif \\(a\\) dan \\(b\\) yang tidak keduanya nol.<br><br>Tentukan Benar atau Salah pada setiap pernyataan berikut terkait operasi biner tersebut!",
+                statements: [
+                    { id: "S1", text: "Nilai dari \\(2 \\odot 2 = 2\\)" },
+                    { id: "S2", text: "Operasi \\(\\odot\\) bersifat komutatif (yaitu \\(a \\odot b = b \\odot a\\))" },
+                    { id: "S3", text: "Nilai dari \\(1 \\odot 3 = 3\\)" }
+                ],
+                correctAnswer: { "S1": "B", "S2": "B", "S3": "S" },
+                explanation: "Sederhanakan definisinya terlebih dahulu:<br>\\(a \\odot b = \\frac{a^2 - 2ab + b^2 + 2ab}{a+b} = \\frac{a^2 + b^2}{a+b}\\)<br><br>1. \\(2 \\odot 2 = (4+4)/(2+2) = 8/4 = 2\\). (BENAR)<br>2. Karena \\(a^2+b^2 = b^2+a^2\\) dan \\(a+b = b+a\\), maka \\(a \\odot b = b \\odot a\\). (BENAR)<br>3. \\(1 \\odot 3 = (1^2 + 3^2)/(1+3) = (1+9)/4 = 10/4 = 2.5\\). (SALAH, nilainya bukan 3)."
+            },
+            {
+                id: 4,
+                type: "PILIHAN GANDA KOMPLEKS",
+                question: "Seorang pasien dengan kadar asam urat tinggi menjalani terapi. Pada hari pertama, kadar asam urat dalam darah tercatat \\(13\\text{ mg/dL}\\). Obat bekerja menurunkan kadar asam urat sebesar \\(20\\%\\) setiap hari secara konsisten dari hari sebelumnya.<br><br>• Pasien mulai merasa lebih nyaman saat kadar asam urat ada di bawah \\(7\\text{ mg/dL}\\).<br>• Pasien dianggap sembuh secara klinis jika kadar asam urat kurang dari \\(5\\text{ mg/dL}\\).<br><br>Pada hari keberapa saja pasien merasa nyaman namun <b>belum</b> dianggap sembuh secara klinis? (Pilih semua yang benar)",
+                options: [
+                    { id: "A", text: "Hari ke-2" },
+                    { id: "B", text: "Hari ke-3" },
+                    { id: "C", text: "Hari ke-4" },
+                    { id: "D", text: "Hari ke-5" },
+                    { id: "E", text: "Hari ke-6" }
+                ],
+                correctAnswer: ["C", "D"],
+                explanation: "Model penurunan adalah deret geometri dengan \\(r = 100\\% - 20\\% = 80\\% = 0.8\\).<br>Hari 1: 13<br>Hari 2: \\(13 \\times 0.8 = 10.4\\)<br>Hari 3: \\(10.4 \\times 0.8 = 8.32\\)<br>Hari 4: \\(8.32 \\times 0.8 = 6.656\\) (Masuk batas nyaman \\(< 7\\), tapi belum sembuh)<br>Hari 5: \\(6.656 \\times 0.8 = 5.3248\\) (Masih di atas 5, nyaman tapi belum sembuh)<br>Hari 6: \\(5.3248 \\times 0.8 = 4.2598\\) (Sudah \\(< 5\\), dianggap sembuh).<br>Maka kondisi nyaman belum sembuh terjadi pada hari ke-4 dan hari ke-5."
+            },
+            {
+                id: 5,
+                type: "BENAR SALAH",
+                question: "Perhatikan tabel distribusi data jumlah pengunjung perpustakaan Desa Sukamaju pada minggu ke-1 bulan Januari!<br><br><table class='w-full text-center border-collapse border border-slate-300 mb-4'><tr><th class='border border-slate-300 bg-slate-100 p-2'>Minggu ke-1</th><td class='border border-slate-300 p-2'>Senin</td><td class='border border-slate-300 p-2'>Selasa</td><td class='border border-slate-300 p-2'>Rabu</td><td class='border border-slate-300 p-2'>Kamis</td><td class='border border-slate-300 p-2'>Jumat</td></tr><tr><th class='border border-slate-300 bg-slate-100 p-2'>Pengunjung</th><td class='border border-slate-300 p-2'>4</td><td class='border border-slate-300 p-2'>P</td><td class='border border-slate-300 p-2'>5</td><td class='border border-slate-300 p-2'>Q</td><td class='border border-slate-300 p-2'>6</td></tr></table>Diketahui:<br>1) Rata-rata pengunjung 6 orang/hari.<br>2) Minimal 2 dan maksimal 10 pengunjung per hari.<br>3) Median data adalah 6.<br><br>Tentukan Benar atau Salah pada setiap pernyataan berikut:",
+                statements: [
+                    { id: "S1", text: "Banyak pengunjung pada hari Selasa (P) pasti selalu lebih banyak dibandingkan hari lain." },
+                    { id: "S2", text: "Banyak pengunjung pada hari Kamis (Q) pasti lebih dari 5 orang." },
+                    { id: "S3", text: "Banyak pengunjung pada hari Jumat dan Kamis mungkin saja sama." }
+                ],
+                correctAnswer: { "S1": "S", "S2": "B", "S3": "B" },
+                explanation: "Rata-rata 6 -> Total = \\(5 \\times 6 = 30\\).<br>Maka \\(4 + P + 5 + Q + 6 = 30 \\Rightarrow P + Q = 15\\).<br>Data diketahui: 4, 5, 6. Syarat median = 6 berarti jika diurutkan polanya: _ , _ , 6, _ , _ .<br>Kombinasi (P,Q) yang jumlahnya 15 (max 10): (5,10), (6,9), (7,8), (8,7), (9,6), (10,5).<br>Jika P=5, Q=10, data: 4,5,5,6,10 (Median 5, Salah). (Berlaku juga untuk 10,5).<br>Pasangan (P,Q) yg sah (menghasilkan median 6) adalah himpunan dari {6,9}, {7,8}. <br><br>S1: Salah. P bisa 6, dan Q 9, sehingga P bukan yg terbanyak.<br>S2: Benar. Berdasarkan himpunan kombinasi yang sah, nilai P dan Q minimal adalah 6.<br>S3: Benar. Jika Q=6 (maka P=9), pengunjung Kamis (6) dan Jumat (6) sama."
+            },
+            {
+                id: 6,
+                type: "PILIHAN GANDA",
+                question: "Dalam rangka memperingati Tahun Baru Imlek, sebuah supermarket membuat kotak undian berisi 60 angpao. Hadiahnya terbagi menjadi:<br>- 15 angpao berisi kupon Rp25.000<br>- 12 angpao berisi kupon Rp50.000<br>- 10 angpao berisi set sendok-garpu<br>- 8 angpao berisi pemanas air<br>- Sisanya angpao kosong.<br><br>Jika Rini mengambil satu angpao secara acak, berapakah peluang mendapatkan angpao kosong?",
+                options: [
+                    { id: "A", text: "\\(\\frac{1}{15}\\)" },
+                    { id: "B", text: "\\(\\frac{1}{5}\\)" },
+                    { id: "C", text: "\\(\\frac{1}{4}\\)" },
+                    { id: "D", text: "\\(\\frac{1}{3}\\)" },
+                    { id: "E", text: "\\(\\frac{5}{11}\\)" }
+                ],
+                correctAnswer: "C",
+                explanation: "Total angpao = 60.<br>Total angpao berisi hadiah = \\(15 + 12 + 10 + 8 = 45\\).<br>Banyak angpao kosong = \\(60 - 45 = 15\\).<br><br>Peluang mendapatkan angpao kosong = \\(\\frac{15}{60} = \\frac{1}{4}\\)."
+            },
+            {
+                id: 7,
+                type: "PILIHAN GANDA",
+                question: "Diketahui dua buah fungsi matematis didefinisikan sebagai \\(f(x) = 2x - 3\\) dan \\(g(x) = x^2 + 1\\). Nilai dari komposisi fungsi \\((g \\circ f)(2)\\) adalah ....",
+                options: [
+                    { id: "A", text: "1" },
+                    { id: "B", text: "2" },
+                    { id: "C", text: "3" },
+                    { id: "D", text: "5" },
+                    { id: "E", text: "10" }
+                ],
+                correctAnswer: "B",
+                explanation: "Langkah pertama, cari nilai dari fungsi bagian dalam, yaitu \\(f(2)\\):<br>\\(f(2) = 2(2) - 3 = 4 - 3 = 1\\).<br><br>Langkah kedua, substitusikan hasil tersebut ke fungsi luar \\(g(x)\\):<br>\\((g \\circ f)(2) = g(f(2)) = g(1)\\).<br>\\(g(1) = (1)^2 + 1 = 1 + 1 = 2\\)."
+            },
+            {
+                id: 8,
+                type: "PILIHAN GANDA",
+                question: "Pada sebuah toko alat tulis, harga 3 buah buku tulis dan 2 buah pensil adalah Rp21.000,00. Sedangkan harga 2 buah buku tulis dan 3 buah pensil adalah Rp19.000,00. Jika Andi ingin membeli 1 buah buku tulis dan 1 buah pensil, maka ia harus membayar sebesar ....",
+                options: [
+                    { id: "A", text: "Rp7.000,00" },
+                    { id: "B", text: "Rp7.500,00" },
+                    { id: "C", text: "Rp8.000,00" },
+                    { id: "D", text: "Rp8.500,00" },
+                    { id: "E", text: "Rp9.000,00" }
+                ],
+                correctAnswer: "C",
+                explanation: "Misalkan harga 1 buku = \\(x\\) dan 1 pensil = \\(y\\).<br>Persamaan 1: \\(3x + 2y = 21.000\\)<br>Persamaan 2: \\(2x + 3y = 19.000\\)<br><br>Cara cepat: Jumlahkan kedua persamaan tersebut!<br>\\((3x+2x) + (2y+3y) = 21.000 + 19.000\\)<br>\\(5x + 5y = 40.000\\)<br><br>Bagi kedua ruas dengan 5:<br>\\(x + y = 8.000\\).<br>Sehingga harga 1 buku dan 1 pensil adalah Rp8.000,00."
+            },
+            {
+                id: 9,
+                type: "PILIHAN GANDA KOMPLEKS",
+                question: "Diberikan matriks \\(A = \\begin{pmatrix} 2 & 1 \\\\ 4 & 3 \\end{pmatrix}\\). Manakah di antara pernyataan-pernyataan di bawah ini yang BENAR? (Pilih semua jawaban yang benar)",
+                options: [
+                    { id: "A", text: "Determinan matriks A adalah 2" },
+                    { id: "B", text: "Matriks A merupakan matriks singular (tidak memiliki invers)" },
+                    { id: "C", text: "Invers matriks A adalah \\(\\begin{pmatrix} 3/2 & -1/2 \\\\ -2 & 1 \\end{pmatrix}\\)" },
+                    { id: "D", text: "Transpose dari matriks A adalah \\(\\begin{pmatrix} 2 & 4 \\\\ 1 & 3 \\end{pmatrix}\\)" }
+                ],
+                correctAnswer: ["A", "C", "D"],
+                explanation: "Mari kita analisis satu persatu:<br>- Determinan \\(|A| = (2 \\times 3) - (1 \\times 4) = 6 - 4 = 2\\). (Opsi A Benar).<br>- Karena determinan bukan nol, maka A bukan matriks singular. (Opsi B Salah).<br>- Invers \\(A^{-1} = \\frac{1}{|A|} \\begin{pmatrix} 3 & -1 \\\\ -4 & 2 \\end{pmatrix} = \\frac{1}{2} \\begin{pmatrix} 3 & -1 \\\\ -4 & 2 \\end{pmatrix} = \\begin{pmatrix} 3/2 & -1/2 \\\\ -2 & 1 \\end{pmatrix}\\). (Opsi C Benar).<br>- Transpose mengubah baris menjadi kolom: \\(A^T = \\begin{pmatrix} 2 & 4 \\\\ 1 & 3 \\end{pmatrix}\\). (Opsi D Benar)."
+            },
+            {
+                id: 10,
+                type: "BENAR SALAH",
+                question: "Sebuah partikel bergerak sepanjang garis lurus dengan persamaan posisi \\(s(t) = t^3 - 6t^2 + 9t + 2\\), di mana \\(s\\) dalam meter dan \\(t\\) waktu dalam detik (\\(t \\ge 0\\)).<br><br>Evaluasilah kebenaran dari pernyataan-pernyataan kinematika berikut:",
+                statements: [
+                    { id: "S1", text: "Kecepatan partikel saat \\(t = 2\\) detik adalah \\(-3\\) m/s." },
+                    { id: "S2", text: "Partikel berhenti seketika (kecepatan nol) pada saat \\(t = 1\\) dan \\(t = 3\\)." },
+                    { id: "S3", text: "Percepatan partikel akan selalu bernilai positif untuk semua \\(t > 0\\)." }
+                ],
+                correctAnswer: { "S1": "B", "S2": "B", "S3": "S" },
+                explanation: "Fungsi kecepatan \\(v(t) = s'(t) = 3t^2 - 12t + 9\\).<br>Fungsi percepatan \\(a(t) = v'(t) = 6t - 12\\).<br><br>S1: Saat \\(t = 2\\), \\(v(2) = 3(4) - 12(2) + 9 = 12 - 24 + 9 = -3\\) m/s. (BENAR)<br>S2: Partikel berhenti bila \\(v(t) = 0\\). <br>\\(3t^2 - 12t + 9 = 0 \\Rightarrow 3(t^2 - 4t + 3) = 0 \\Rightarrow 3(t-1)(t-3) = 0\\). Akarnya \\(t=1\\) dan \\(t=3\\). (BENAR)<br>S3: Percepatan \\(a(t) = 6t - 12\\). Jika \\(t = 1\\), nilainya \\(6(1) - 12 = -6\\) (negatif). Jadi tidak selalu positif. (SALAH)"
+            }
+        ];
+
+        let state = {
+            identity: { name: '', class: '', school: '', duration: 40 },
+            currentIdx: 0,
+            answers: [], // Array of various formats depending on question type
+            flagged: new Array(examData.length).fill(false),
+            timeLeft: 0,
+            timerInterval: null
+        };
+
+        // Initialize empty structures for answers
+        examData.forEach(q => {
+            if (q.type === "PILIHAN GANDA KOMPLEKS") state.answers.push([]);
+            else if (q.type === "BENAR SALAH") state.answers.push({});
+            else state.answers.push(null); // Pilihan ganda standard
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('prep-total-questions').textContent = `${examData.length} Soal`;
+            
+            const durSlider = document.getElementById('input-duration');
+            const durVal = document.getElementById('duration-val');
+            const durDisplay = document.getElementById('prep-duration-display');
+            
+            durSlider.addEventListener('input', (e) => {
+                durVal.textContent = e.target.value;
+                durDisplay.textContent = `${e.target.value} Menit`;
+            });
+        });
+
+        function startExam() {
+            const name = document.getElementById('input-name').value.trim();
+            const cls = document.getElementById('input-class').value.trim();
+            const school = document.getElementById('input-school').value.trim();
+            const duration = parseInt(document.getElementById('input-duration').value);
+
+            if(!name || !cls || !school) {
+                document.getElementById('prep-error').classList.remove('hidden');
+                return;
+            }
+
+            state.identity = { name, class: cls, school, duration };
+            state.timeLeft = duration * 60; 
+            
+            document.getElementById('view-prep').classList.add('hidden');
+            document.getElementById('view-exam').classList.remove('hidden');
+            document.getElementById('view-exam').classList.add('flex'); 
+
+            document.getElementById('header-student-name').textContent = state.identity.name;
+            
+            renderGrid();
+            renderQuestion();
+            updateProgress();
+            
+            state.timerInterval = setInterval(updateTimer, 1000);
+            updateTimer(); 
+        }
+
+        function updateTimer() {
+            if(state.timeLeft <= 0) {
+                clearInterval(state.timerInterval);
+                submitExam(true); 
+                return;
+            }
+
+            state.timeLeft--;
+            const h = Math.floor(state.timeLeft / 3600);
+            const m = Math.floor((state.timeLeft % 3600) / 60);
+            const s = state.timeLeft % 60;
+            
+            let timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            if (h > 0) timeStr = `${h.toString().padStart(2, '0')}:${timeStr}`;
+            
+            const timerEl = document.getElementById('timer-display');
+            timerEl.textContent = timeStr;
+
+            if(state.timeLeft < 300) { 
+                timerEl.parentElement.classList.replace('bg-slate-800', 'bg-red-600');
+            }
+        }
+
+        function checkIsAnswered(idx) {
+            const ans = state.answers[idx];
+            const q = examData[idx];
+            
+            if (q.type === "PILIHAN GANDA") return ans !== null;
+            if (q.type === "PILIHAN GANDA KOMPLEKS") return Array.isArray(ans) && ans.length > 0;
+            if (q.type === "BENAR SALAH") return Object.keys(ans).length === q.statements.length;
+            
+            return false;
+        }
+
+        function updateProgress() {
+            let answeredCount = 0;
+            for(let i=0; i<examData.length; i++) {
+                if (checkIsAnswered(i)) answeredCount++;
+            }
+            document.getElementById('header-progress-text').textContent = `Dijawab: ${answeredCount}/${examData.length}`;
+        }
+
+        function renderGrid() {
+            const container = document.getElementById('grid-container');
+            container.innerHTML = '';
+            
+            for(let i=0; i<examData.length; i++) {
+                const btn = document.createElement('button');
+                btn.className = `grid-btn w-full aspect-square rounded-lg flex items-center justify-center font-semibold text-sm border border-slate-200 text-slate-600 hover:bg-slate-100`;
+                btn.textContent = i + 1;
+                btn.onclick = () => jumpToQuestion(i);
+                
+                if(i === state.currentIdx) btn.classList.add('active');
+                if(checkIsAnswered(i)) btn.classList.add('answered');
+                if(state.flagged[i]) btn.classList.add('flagged');
+
+                container.appendChild(btn);
+            }
+        }
+
+        function renderQuestion() {
+            const q = examData[state.currentIdx];
+            
+            document.getElementById('q-number').textContent = `SOAL ${state.currentIdx + 1}`;
+            
+            const typeBadge = document.getElementById('q-type-badge');
+            typeBadge.textContent = q.type;
+            if (q.type === "BENAR SALAH") {
+                typeBadge.className = "bg-purple-100 text-purple-700 px-2 py-1 rounded-md text-xs font-semibold border border-purple-200";
+            } else if (q.type === "PILIHAN GANDA KOMPLEKS") {
+                typeBadge.className = "bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md text-xs font-semibold border border-emerald-200";
+            } else {
+                typeBadge.className = "bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-semibold border border-blue-200";
+            }
+
+            const flagBtn = document.getElementById('btn-flag');
+            if(state.flagged[state.currentIdx]) {
+                flagBtn.classList.replace('text-slate-600', 'text-amber-500');
+                flagBtn.classList.replace('border-slate-200', 'border-amber-500');
+                flagBtn.classList.add('bg-amber-50');
+            } else {
+                flagBtn.classList.replace('text-amber-500', 'text-slate-600');
+                flagBtn.classList.replace('border-amber-500', 'border-slate-200');
+                flagBtn.classList.remove('bg-amber-50');
+            }
+
+            const qText = document.getElementById('q-text');
+            qText.innerHTML = q.question;
+
+            const intArea = document.getElementById('q-interaction-area');
+            intArea.innerHTML = '';
+            
+            if (q.type === "PILIHAN GANDA" || q.type === "PILIHAN GANDA KOMPLEKS") {
+                const isComplex = q.type === "PILIHAN GANDA KOMPLEKS";
+                
+                q.options.forEach(opt => {
+                    let isSelected = false;
+                    if (isComplex) isSelected = state.answers[state.currentIdx].includes(opt.id);
+                    else isSelected = state.answers[state.currentIdx] === opt.id;
+                    
+                    const inputType = isComplex ? "checkbox" : "radio";
+                    const funcName = isComplex ? `toggleOptionPGK('${opt.id}')` : `selectOptionPG('${opt.id}')`;
+
+                    const label = document.createElement('label');
+                    label.className = `option-label block relative`;
+                    label.innerHTML = `
+                        <input type="${inputType}" name="ans_${state.currentIdx}" value="${opt.id}" class="option-input sr-only" ${isSelected ? 'checked' : ''} onchange="${funcName}">
+                        <div class="option-box flex items-center gap-4 p-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors">
+                            <div class="option-letter w-8 h-8 flex-shrink-0 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm transition-colors">
+                                ${isComplex ? '<i class="fa-solid fa-check opacity-0 transition-opacity"></i>' : opt.id}
+                            </div>
+                            <div class="text-slate-700 w-full option-text">
+                                ${opt.text}
+                            </div>
+                        </div>
+                    `;
+                    // CSS hack for checkboxes inside JS
+                    if (isComplex) {
+                        label.innerHTML += `<style>.option-input:checked + .option-box .option-letter i { opacity: 1; }</style>`;
+                    }
+                    intArea.appendChild(label);
+                });
+            } 
+            else if (q.type === "BENAR SALAH") {
+                const table = document.createElement('table');
+                table.className = "w-full border-collapse border border-slate-200 text-sm";
+                
+                let tbodyHTML = `
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-3 border border-slate-200 text-left w-3/4">Pernyataan</th>
+                            <th class="p-3 border border-slate-200 text-center text-green-700 w-1/8">Benar</th>
+                            <th class="p-3 border border-slate-200 text-center text-red-700 w-1/8">Salah</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                `;
+
+                q.statements.forEach(stmt => {
+                    const userAns = state.answers[state.currentIdx][stmt.id];
+                    tbodyHTML += `
+                        <tr>
+                            <td class="p-4 border border-slate-200 text-slate-700 leading-relaxed">${stmt.text}</td>
+                            <td class="p-4 border border-slate-200 text-center align-middle">
+                                <input type="radio" name="stmt_${stmt.id}" value="B" class="w-5 h-5 accent-green-600 cursor-pointer" ${userAns === 'B' ? 'checked' : ''} onchange="selectOptionBS('${stmt.id}', 'B')">
+                            </td>
+                            <td class="p-4 border border-slate-200 text-center align-middle">
+                                <input type="radio" name="stmt_${stmt.id}" value="S" class="w-5 h-5 accent-red-600 cursor-pointer" ${userAns === 'S' ? 'checked' : ''} onchange="selectOptionBS('${stmt.id}', 'S')">
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                tbodyHTML += `</tbody>`;
+                table.innerHTML = tbodyHTML;
+                intArea.appendChild(table);
+            }
+
+            if (window.MathJax) {
+                MathJax.typesetPromise([qText, intArea]).catch(err => console.log('MathJax error: ', err));
+            }
+
+            document.getElementById('btn-prev').disabled = state.currentIdx === 0;
+            
+            const btnNext = document.getElementById('btn-next');
+            const btnSubmit = document.getElementById('btn-submit-main');
+            
+            if(state.currentIdx === examData.length - 1) {
+                btnNext.classList.add('hidden');
+                btnSubmit.classList.remove('hidden');
+            } else {
+                btnNext.classList.remove('hidden');
+                btnSubmit.classList.add('hidden');
+            }
+
+            document.querySelector('.custom-scrollbar').scrollTo(0,0);
+        }
+
+        function selectOptionPG(val) {
+            state.answers[state.currentIdx] = val;
+            updateProgress();
+            renderGrid();
+        }
+
+        function toggleOptionPGK(val) {
+            let ansArray = state.answers[state.currentIdx];
+            if (ansArray.includes(val)) {
+                ansArray = ansArray.filter(v => v !== val);
+            } else {
+                ansArray.push(val);
+            }
+            state.answers[state.currentIdx] = ansArray;
+            updateProgress();
+            renderGrid();
+        }
+
+        function selectOptionBS(stmtId, val) {
+            state.answers[state.currentIdx][stmtId] = val;
+            updateProgress();
+            renderGrid();
+        }
+
+        function toggleFlag() {
+            state.flagged[state.currentIdx] = !state.flagged[state.currentIdx];
+            renderQuestion(); 
+            renderGrid(); 
+        }
+
+        function jumpToQuestion(idx) {
+            state.currentIdx = idx;
+            renderQuestion();
+            renderGrid();
+        }
+
+        function navQuestion(dir) {
+            if(dir === 'next' && state.currentIdx < examData.length - 1) {
+                state.currentIdx++;
+            } else if (dir === 'prev' && state.currentIdx > 0) {
+                state.currentIdx--;
+            }
+            renderQuestion();
+            renderGrid();
+        }
+
+        function showSubmitModal() {
+            let unanswered = 0;
+            for(let i=0; i<examData.length; i++) if (!checkIsAnswered(i)) unanswered++;
+            
+            const msgEl = document.getElementById('modal-warning-text');
+            
+            if(unanswered > 0) {
+                msgEl.innerHTML = `Anda masih memiliki <strong class="text-amber-500">${unanswered} soal</strong> yang belum (lengkap) dijawab. Yakin ingin mengakhiri?`;
+            } else {
+                msgEl.innerHTML = `Semua soal telah terjawab. Yakin ingin mengakhiri dan melihat hasil?`;
+            }
+            
+            document.getElementById('modal-submit').classList.remove('hidden');
+        }
+
+        function closeSubmitModal() {
+            document.getElementById('modal-submit').classList.add('hidden');
+        }
+
+        function submitExam(isForced = false) {
+            clearInterval(state.timerInterval);
+            document.getElementById('modal-submit').classList.add('hidden');
+            
+            document.getElementById('view-exam').classList.add('hidden');
+            document.getElementById('view-exam').classList.remove('flex');
+            document.getElementById('view-result').classList.remove('hidden');
+            document.getElementById('view-result').classList.add('block');
+
+            calculateAndRenderResults();
+        }
+
+        function isCorrectLogic(q, userAns) {
+            if (q.type === "PILIHAN GANDA") {
+                return userAns === q.correctAnswer;
+            } 
+            else if (q.type === "PILIHAN GANDA KOMPLEKS") {
+                if (!Array.isArray(userAns)) return false;
+                if (userAns.length !== q.correctAnswer.length) return false;
+                const sUser = [...userAns].sort();
+                const sCorr = [...q.correctAnswer].sort();
+                return sUser.every((v, i) => v === sCorr[i]);
+            } 
+            else if (q.type === "BENAR SALAH") {
+                if (Object.keys(userAns).length !== q.statements.length) return false;
+                return Object.keys(q.correctAnswer).every(k => userAns[k] === q.correctAnswer[k]);
+            }
+            return false;
+        }
+
+        function calculateAndRenderResults() {
+            let correct = 0;
+            let wrong = 0;
+            let empty = 0;
+
+            const evalList = document.getElementById('evaluation-list');
+            evalList.innerHTML = '';
+
+            examData.forEach((q, i) => {
+                const isAnswered = checkIsAnswered(i);
+                const isCorrect = isAnswered && isCorrectLogic(q, state.answers[i]);
+                
+                let statusBadge = '';
+                if (!isAnswered) {
+                    empty++;
+                    statusBadge = `<span class="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs font-bold">KOSONG</span>`;
+                } else if (isCorrect) {
+                    correct++;
+                    statusBadge = `<span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">BENAR</span>`;
+                } else {
+                    wrong++;
+                    statusBadge = `<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-bold">SALAH</span>`;
+                }
+
+                let optionsHTML = '';
+                
+                if (q.type === "PILIHAN GANDA" || q.type === "PILIHAN GANDA KOMPLEKS") {
+                    const isComplex = q.type === "PILIHAN GANDA KOMPLEKS";
+                    const uAns = state.answers[i] || [];
+                    
+                    q.options.forEach(opt => {
+                        let isSelected = isComplex ? uAns.includes(opt.id) : uAns === opt.id;
+                        let isCorrectOpt = isComplex ? q.correctAnswer.includes(opt.id) : q.correctAnswer === opt.id;
+                        
+                        let optStyle = "border-slate-200 bg-white text-slate-700";
+                        let checkIcon = "";
+
+                        if (isCorrectOpt) {
+                            optStyle = "border-green-500 bg-green-50 text-green-800 font-medium";
+                            checkIcon = `<i class="fa-solid fa-check text-green-600"></i>`;
+                        } else if (isSelected && !isCorrectOpt) {
+                            optStyle = "border-red-400 bg-red-50 text-red-800";
+                            checkIcon = `<i class="fa-solid fa-xmark text-red-500"></i>`;
+                        }
+
+                        optionsHTML += `
+                            <div class="flex items-center gap-3 p-3 rounded-lg border ${optStyle} mb-2">
+                                <div class="w-6 h-6 flex-shrink-0 rounded bg-white border border-inherit flex items-center justify-center font-bold text-xs">
+                                    ${opt.id}
+                                </div>
+                                <div class="flex-grow text-sm option-text">${opt.text}</div>
+                                ${checkIcon}
+                            </div>
+                        `;
+                    });
+                } 
+                else if (q.type === "BENAR SALAH") {
+                    optionsHTML = `<table class="w-full border-collapse border border-slate-200 text-sm mb-2"><thead class="bg-slate-50"><tr><th class="p-2 border border-slate-200 text-left">Pernyataan</th><th class="p-2 border border-slate-200 w-20 text-center">Jawabanmu</th><th class="p-2 border border-slate-200 w-20 text-center">Kunci</th></tr></thead><tbody>`;
+                    
+                    q.statements.forEach(stmt => {
+                        const uAns = state.answers[i][stmt.id] || '-';
+                        const cAns = q.correctAnswer[stmt.id];
+                        const isMatch = uAns === cAns;
+                        const matchStyle = isMatch ? 'text-green-600 font-bold' : (uAns === '-' ? 'text-slate-400' : 'text-red-600 font-bold');
+                        
+                        optionsHTML += `
+                            <tr>
+                                <td class="p-2 border border-slate-200">${stmt.text}</td>
+                                <td class="p-2 border border-slate-200 text-center ${matchStyle}">${uAns}</td>
+                                <td class="p-2 border border-slate-200 text-center font-bold text-blue-700">${cAns}</td>
+                            </tr>
+                        `;
+                    });
+                    optionsHTML += `</tbody></table>`;
+                }
+
+                // Build Card
+                const card = document.createElement('div');
+                card.className = "border border-slate-200 rounded-xl overflow-hidden page-break-inside-avoid";
+                card.innerHTML = `
+                    <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-start">
+                        <div>
+                            <span class="font-bold text-slate-800 mr-2">Soal ${i + 1}</span>
+                            <span class="text-[10px] text-slate-500 mr-2 border-r border-slate-300 pr-2">${q.type}</span>
+                            ${statusBadge}
+                        </div>
+                        <button onclick="toggleExpl(this)" class="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1">
+                            <i class="fa-solid fa-chevron-down transition-transform"></i> Pembahasan
+                        </button>
+                    </div>
+                    <div class="p-5">
+                        <div class="text-slate-800 mb-4 text-sm question-text">${q.question}</div>
+                        <div class="mb-4">${optionsHTML}</div>
+                        
+                        <div class="explanation-box hidden mt-4 pt-4 border-t border-slate-100">
+                            <div class="flex items-center gap-2 text-sm font-bold text-blue-700 mb-2">
+                                <i class="fa-solid fa-lightbulb"></i> Langkah Penyelesaian
+                            </div>
+                            <div class="text-sm text-slate-700 bg-blue-50 p-4 rounded-lg explanation-text">
+                                ${q.explanation}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                evalList.appendChild(card);
+            });
+
+            if (window.MathJax) {
+                MathJax.typesetPromise([evalList]).catch(err => console.log('MathJax error: ', err));
+            }
+
+            const now = new Date();
+            document.getElementById('res-name').textContent = state.identity.name;
+            document.getElementById('res-class').textContent = state.identity.class;
+            document.getElementById('res-school').textContent = state.identity.school;
+            document.getElementById('res-time').textContent = now.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+
+            document.getElementById('res-correct').textContent = correct;
+            document.getElementById('res-wrong').textContent = wrong;
+            document.getElementById('res-empty').textContent = empty;
+
+            const score = Math.round((correct / examData.length) * 100);
+            animateValue(document.getElementById('res-score-percent'), 0, score, 1500);
+            
+            let color = '#ef4444'; 
+            if (score >= 50) color = '#f59e0b'; 
+            if (score >= 80) color = '#10b981'; 
+            document.getElementById('score-circle').style.background = `conic-gradient(${color} ${score}%, #e2e8f0 0)`;
+        }
+
+        function animateValue(obj, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        function toggleExpl(btn) {
+            const icon = btn.querySelector('i');
+            const box = btn.closest('.border').querySelector('.explanation-box');
+            
+            if (box.classList.contains('hidden')) {
+                box.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+            } else {
+                box.classList.add('hidden');
+                icon.classList.remove('rotate-180');
+            }
+        }
+
+        let isAllExplOpen = false;
+        function toggleAllExplanations() {
+            isAllExplOpen = !isAllExplOpen;
+            const boxes = document.querySelectorAll('.explanation-box');
+            const icons = document.querySelectorAll('.border .fa-chevron-down');
+            const btn = document.getElementById('btn-toggle-expl');
+            
+            boxes.forEach(box => {
+                if (isAllExplOpen) box.classList.remove('hidden');
+                else box.classList.add('hidden');
+            });
+
+            icons.forEach(icon => {
+                if(isAllExplOpen) icon.classList.add('rotate-180');
+                else icon.classList.remove('rotate-180');
+            });
+
+            btn.textContent = isAllExplOpen ? 'Tutup Semua Pembahasan' : 'Buka Semua Pembahasan';
+        }
+
+        function generatePDF() {
+            const actionBtns = document.getElementById('result-actions');
+            actionBtns.style.display = 'none';
+            
+            if(!isAllExplOpen) toggleAllExplanations();
+
+            const element = document.getElementById('report-container');
+            const opt = {
+                margin:       [10, 10, 10, 10], 
+                filename:     `Hasil_TRYOUT_${state.identity.name.replace(/\s+/g, '_')}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                actionBtns.style.display = 'flex';
+            });
+        }
+    </script>
+</body>
+</html>
